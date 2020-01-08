@@ -5176,6 +5176,45 @@ class ValidationValidatorTest extends TestCase
         $this->assertSame(['mouse' => null], $validator->invalid());
     }
 
+    public function testNestedRulesWorkForObject() {
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cat' => ['name' => 'Tom', 'age' => 5]],
+            ['cat' => ['name' => 'required']]
+        );
+        $this->assertTrue($validator->passes());
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cat' => ['name' => 'Tom', 'age' => 5]],
+            ['cat' => ['name' => 'required', 'age' => 'required|int']]
+        );
+        $this->assertTrue($validator->passes());
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cat' => ['name' => 'Tom', 'age' => 'five']],
+            ['cat' => ['name' => 'required', 'age' => 'required|int']]
+        );
+        $this->assertFalse($validator->passes());
+    }
+
+    public function testNestedRulesWorkForObjectsInArray() {
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cats' => [['name' => 'Tom', 'age' => 5], ['name' => 'Mittens', 'age' => 10]]],
+            ['cats.*' => ['name' => 'required']]
+        );
+        $this->assertTrue($validator->passes());
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cats' => [['name' => 'Tom', 'age' => 5], ['name' => 'Mittens', 'age' => 10]]],
+            ['cats.*' => ['name' => 'required', 'age' => 'required|int']]
+        );
+        $this->assertTrue($validator->passes());
+    }
+
     protected function getTranslator()
     {
         return m::mock(TranslatorContract::class);
