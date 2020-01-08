@@ -63,6 +63,12 @@ class ValidationRuleParser
     protected function explodeRules($rules)
     {
         foreach ($rules as $key => $rule) {
+            if (is_array($rule) && Arr::isAssoc($rule)) {
+                $rules = $this->explodeNestedRules($rules, $key, $rule);
+                unset($rules[$key]);
+            }
+        }
+        foreach ($rules as $key => $rule) {
             if (Str::contains($key, '*')) {
                 $rules = $this->explodeWildcardRules($rules, $key, [$rule]);
 
@@ -73,6 +79,23 @@ class ValidationRuleParser
         }
 
         return $rules;
+    }
+
+    /**
+     * Define a set of rules that apply to each element in an array attribute.
+     *
+     * @param  array  $results
+     * @param  string  $attribute
+     * @param  $rules
+     * @return array
+     */
+    protected function explodeNestedRules($results, $attribute, $rules)
+    {
+        foreach ($rules as $nestedKey => $nestedRules) {
+            $results = $this->mergeRules($results, "$attribute.$nestedKey", $nestedRules);
+        }
+
+        return $results;
     }
 
     /**
