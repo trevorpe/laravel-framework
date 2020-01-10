@@ -106,6 +106,7 @@ class ValidationRuleParser
 
         if (! is_object($rule) ||
             $rule instanceof RuleContract ||
+            $rule instanceof Validator ||
             ($rule instanceof Exists && $rule->queryCallbacks()) ||
             ($rule instanceof Unique && $rule->queryCallbacks())) {
             return $rule;
@@ -191,7 +192,7 @@ class ValidationRuleParser
      */
     public static function parse($rules)
     {
-        if ($rules instanceof RuleContract) {
+        if ($rules instanceof RuleContract || $rules instanceof Validator) {
             return [$rules, []];
         }
 

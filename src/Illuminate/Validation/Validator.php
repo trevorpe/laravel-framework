@@ -450,6 +450,12 @@ class Validator implements ValidatorContract
                     : null;
         }
 
+        if ($rule instanceof Validator) {
+            return $validatable
+                ? $this->validateUsingNestedValidator($attribute, $value, $rule)
+                : null;
+        }
+
         $method = "validate{$rule}";
 
         if ($validatable && ! $this->$method($attribute, $value, $parameters, $this)) {
@@ -639,6 +645,33 @@ class Validator implements ValidatorContract
                 $this->messages->add($attribute, $this->makeReplacements(
                     $message, $attribute, get_class($rule), []
                 ));
+            }
+        }
+    }
+
+    /**
+     * Validate an attribute using a nested validator.
+     *
+     * @param  string  $attribute
+     * @param  mixed  $value
+     * @param  Validator  $rule
+     * @return void
+     */
+    protected function validateUsingNestedValidator($attribute, $value, $rule) {
+        // Set data on the validator instance since it could be on a wildcard rule, meaning $value is from an array
+        $rule->setData($value);
+
+        if (! $rule->passes()) {
+            $this->failedRules[$attribute][get_class($rule)] = [];
+
+            $messages = $rule->messages()->toArray();
+
+            foreach ($messages as $nestedAttribute => $nestedMessages) {
+                foreach ($nestedMessages as $nestedMessage) {
+                    $this->messages->add("$attribute.$nestedAttribute", $this->makeReplacements(
+                        $nestedMessage, "$attribute.$nestedAttribute", get_class($rule), []
+                    ));
+                }
             }
         }
     }
