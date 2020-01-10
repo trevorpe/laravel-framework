@@ -5176,6 +5176,122 @@ class ValidationValidatorTest extends TestCase
         $this->assertSame(['mouse' => null], $validator->invalid());
     }
 
+    public function testNestedValidatorPasses() {
+        $data = [
+            'relatedEntity' => [
+                'id' => 1,
+                'stringKey' => 'string'
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntity' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntity'],
+                    [
+                        'id' => 'required|int',
+                        'stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $this->assertTrue($validator->passes());
+    }
+
+    public function testMessagesWhenNestedValidatorFails() {
+        $data = [
+            'relatedEntity' => [
+                'id' => 1,
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntity' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntity'],
+                    [
+                        'id' => 'required|int',
+                        'stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('relatedEntity.stringKey', $validator->errors()->toArray());
+    }
+
+    public function testNestedValidatorWorksOnWildcardAttribute() {
+        $data = [
+            'relatedEntities' => [
+                [
+                    'id' => 1,
+                    'stringKey' => 'string1'
+                ],
+                [
+                    'id' => 2,
+                    'stringKey' => 'string2'
+                ]
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntities.*' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntities'],
+                    [
+                        'id' => 'required|int',
+                        'stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $this->assertTrue($validator->passes());
+    }
+
+    public function testNestedValidatorWorksWithWildcardInNewValidator() {
+        $data = [
+            'relatedEntities' => [
+                [
+                    'id' => 1,
+                    'stringKey' => 'string1'
+                ],
+                [
+                    'id' => 2,
+                    'stringKey' => 'string2'
+                ]
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntities' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntities'],
+                    [
+                        '*.id' => 'required|int',
+                        '*.stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $this->assertTrue($validator->passes());
+    }
+
     protected function getTranslator()
     {
         return m::mock(TranslatorContract::class);
