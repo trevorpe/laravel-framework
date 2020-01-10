@@ -5177,33 +5177,37 @@ class ValidationValidatorTest extends TestCase
     }
 
     public function testSinglyNestedRulesWorkForSingleAssocArray() {
+        $rules = ['cat' => ['name' => 'required', 'age' => 'required|int']];
+
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cat' => ['name' => 'Tom', 'age' => 5]],
-            ['cat' => ['name' => 'required', 'age' => 'required|int']]
+            $rules
         );
         $this->assertTrue($validator->passes());
 
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cat' => ['name' => 'Tom', 'age' => 'five']],
-            ['cat' => ['name' => 'required', 'age' => 'required|int']]
+            $rules
         );
         $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('cat.age', $validator->errors()->toArray());
     }
 
     public function testSinglyNestedArrayRulesWorksForMultipleAssocArrays() {
+        $rules = ['cats.*' => ['name' => 'required|string', 'age' => 'required|int']];
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cats' => [['name' => 'Tom', 'age' => 5], ['name' => 'Mittens', 'age' => 10]]],
-            ['cats.*' => ['name' => 'required', 'age' => 'required|int']]
+            $rules
         );
         $this->assertTrue($validator->passes());
 
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cats' => [['name' => null, 'age' => 5], ['name' => 'Mittens', 'age' => 'ten']]],
-            ['cats.*' => ['name' => 'required', 'age' => 'required|int']]
+            $rules
         );
         $this->assertTrue($validator->fails());
         $errors = $validator->errors()->toArray();
@@ -5211,18 +5215,19 @@ class ValidationValidatorTest extends TestCase
         $this->assertArrayHasKey('cats.1.age', $errors);
     }
 
-    public function testSinglyNestedArrayRulesWorkWithAsterisk() {
+    public function testSinglyNestedArrayRulesWorkWithNestedAsterisk() {
+        $rules = ['cat' => ['name' => 'required|string', 'age' => 'required|int', 'hobbies.*' => 'string']];
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cat' => ['name' => 'Tom', 'age' => 5, 'hobbies' => ['Chasing mice', 'Sleeping']]],
-            ['cat' => ['name' => 'required', 'age' => 'required|int', 'hobbies.*' => 'string']]
+            $rules
         );
         $this->assertTrue($validator->passes());
 
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             ['cat' => ['name' => 'Tom', 'age' => 5, 'hobbies' => [5, 'Chasing mice']]],
-            ['cat' => ['name' => 'required', 'age' => 'required|int', 'hobbies.*' => 'string']]
+            $rules
         );
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('cat.hobbies.0', $validator->errors()->toArray());
@@ -5231,6 +5236,17 @@ class ValidationValidatorTest extends TestCase
 
     public function testMultipleNestedRulesWorkForSingleAssocArray()
     {
+        $rules = [
+            'cat' => [
+                'name' => 'required|string',
+                'age' => 'required|int',
+                'sibling' => [
+                    'name' => 'required|string',
+                    'age' => 'required|int',
+                ],
+            ],
+        ];
+
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             [
@@ -5243,16 +5259,7 @@ class ValidationValidatorTest extends TestCase
                     ],
                 ],
             ],
-            [
-                'cat' => [
-                    'name' => 'required',
-                    'age' => 'required|int',
-                    'sibling' => [
-                        'name' => 'required|string',
-                        'age' => 'required|int',
-                    ],
-                ],
-            ]
+            $rules
         );
         $this->assertTrue($validator->passes());
 
@@ -5268,22 +5275,21 @@ class ValidationValidatorTest extends TestCase
                     ],
                 ],
             ],
-            [
-                'cat' => [
-                    'name' => 'required',
-                    'age' => 'required|int',
-                    'sibling' => [
-                        'name' => 'required|string',
-                        'age' => 'required|int',
-                    ],
-                ],
-            ]
+            $rules
         );
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('cat.sibling.age', $validator->errors()->toArray());
     }
 
     public function testMultipleNestedArrayRulesWorksForMultipleAssocArrays() {
+        $rules = [
+            'cats.*' => [
+                'name' => 'required',
+                'age' => 'required|int',
+                'sibling' => ['name' => 'required|string']
+            ]
+        ];
+
         $validator = new Validator(
             $this->getIlluminateArrayTranslator(),
             [
@@ -5299,13 +5305,7 @@ class ValidationValidatorTest extends TestCase
                     ]
                 ]
             ],
-            ['cats.*' => [
-                'name' => 'required',
-                'age' => 'required|int',
-                'sibling' => [
-                    'name' => 'required|string'
-                ]
-            ]]
+            $rules
         );
         $this->assertTrue($validator->passes());
 
@@ -5324,19 +5324,148 @@ class ValidationValidatorTest extends TestCase
                     ]
                 ]
             ],
-            ['cats.*' => [
-                'name' => 'required',
-                'age' => 'required|int',
-                'sibling' => [
-                    'name' => 'required|string'
-                ]
-            ]]
+            $rules
         );
         $this->assertTrue($validator->fails());
         $errors = $validator->errors()->toArray();
         $this->assertArrayHasKey('cats.1.sibling.name', $errors);
     }
 
+    public function testSinglyNestedArrayRulesExplodes() {
+        $rules = ['cat' => ['name' => 'required', 'age' => 'required|int']];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cat' => ['name' => 'Tom', 'age' => 5]],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cat.name', ['Required']));
+        $this->assertTrue($validator->hasRule('cat.age', ['Required', 'Integer']));
+    }
+
+    public function testSinglyNestedArrayRulesExplodesForAsterisk() {
+        $rules = ['cats.*' => ['name' => 'required|string', 'age' => 'required|int']];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cats' => [['name' => 'Tom', 'age' => 5], ['name' => 'Mittens', 'age' => 10]]],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cats.0.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.0.age', ['Required', 'Integer']));
+        $this->assertTrue($validator->hasRule('cats.1.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.1.age', ['Required', 'Integer']));
+    }
+
+    public function testSinglyNestedArrayRulesExplodeWithNestedAsterisk() {
+        $rules = ['cat' => ['name' => 'required|string', 'age' => 'required|int', 'hobbies.*' => 'string']];
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            ['cat' => ['name' => 'Tom', 'age' => 5, 'hobbies' => ['Chasing mice', 'Sleeping']]],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cat.hobbies.0', ['String']));
+        $this->assertTrue($validator->hasRule('cat.hobbies.1', ['String']));
+    }
+
+    public function testMultipleNestedRulesExplodes()
+    {
+        $rules = [
+            'cat' => [
+                'name' => 'required|string',
+                'age' => 'required|int',
+                'sibling' => [
+                    'name' => 'required|string',
+                    'age' => 'required|int',
+                ],
+            ],
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            [
+                'cat' => [
+                    'name' => 'Tom',
+                    'age' => 5,
+                    'sibling' => [
+                        'name' => 'Tina',
+                        'age' => 1,
+                    ],
+                ],
+            ],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cat.sibling.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cat.sibling.age', ['Required', 'Integer']));
+    }
+
+    public function testMultipleNestedArrayRulesExplodesForAsterisk() {
+        $rules = [
+            'cats.*' => [
+                'name' => 'required',
+                'age' => 'required|int',
+                'sibling' => ['name' => 'required|string']
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            [
+                'cats' => [
+                    [
+                        'name' => 'Tom',
+                        'age' => 5,
+                        'sibling' => ['name' => 'Brother']
+                    ], [
+                        'name' => 'Mittens',
+                        'age' => 10,
+                        'sibling' => ['name' => 'Sister']
+                    ]
+                ]
+            ],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cats.0.sibling.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.1.sibling.name', ['Required', 'String']));
+    }
+
+    public function testMultipleNestedArrayRulesExplodesWithNestedAsterisk() {
+        $rules = [
+            'cats.*' => [
+                'name' => 'required',
+                'age' => 'required|int',
+                'siblings.*' => ['name' => 'required|string']
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            [
+                'cats' => [
+                    [
+                        'name' => 'Tom',
+                        'age' => 5,
+                        'siblings' => [
+                            ['name' => 'Brother'],
+                            ['name' => 'Sister']
+                        ]
+                    ], [
+                        'name' => 'Mittens',
+                        'age' => 10,
+                        'siblings' => [
+                            ['name' => 'Brother'],
+                            ['name' => 'Sister']
+                        ]
+                    ]
+                ]
+            ],
+            $rules
+        );
+        $this->assertTrue($validator->hasRule('cats.0.siblings.0.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.0.siblings.1.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.1.siblings.0.name', ['Required', 'String']));
+        $this->assertTrue($validator->hasRule('cats.1.siblings.1.name', ['Required', 'String']));
+    }
 
     protected function getTranslator()
     {
