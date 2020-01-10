@@ -62,12 +62,8 @@ class ValidationRuleParser
      */
     protected function explodeRules($rules)
     {
-        foreach ($rules as $key => $rule) {
-            if (is_array($rule) && Arr::isAssoc($rule)) {
-                $rules = $this->explodeNestedRules($rules, $key, $rule);
-                unset($rules[$key]);
-            }
-        }
+        $rules = $this->explodeNestedRules($rules);
+
         foreach ($rules as $key => $rule) {
             if (Str::contains($key, '*')) {
                 $rules = $this->explodeWildcardRules($rules, $key, [$rule]);
@@ -82,20 +78,34 @@ class ValidationRuleParser
     }
 
     /**
-     * Define a set of rules that apply to each element in an array attribute.
+     * Explodes nested rules within an array.
      *
-     * @param  array  $results
-     * @param  string  $attribute
      * @param  $rules
      * @return array
      */
-    protected function explodeNestedRules($results, $attribute, $rules)
+    protected function explodeNestedRules($rules)
     {
-        foreach ($rules as $nestedKey => $nestedRules) {
-            $results = $this->mergeRules($results, "$attribute.$nestedKey", $nestedRules);
+        foreach ($rules as $key => $nestedRules) {
+            if ($this->isNestedRule($nestedRules)) {
+                foreach ($this->explodeNestedRules($nestedRules) as $nestedKey => $rule) {
+                    $rules["$key.$nestedKey"] = $rule;
+                }
+                unset($rules[$key]);
+            }
         }
 
-        return $results;
+        return $rules;
+    }
+
+    /**
+     * Determine if the rules in question are intended to be exploded in the original array.
+     *
+     * @param $rules
+     * @return bool
+     */
+    protected function isNestedRule($rules)
+    {
+        return is_array($rules) && Arr::isAssoc($rules);
     }
 
     /**
