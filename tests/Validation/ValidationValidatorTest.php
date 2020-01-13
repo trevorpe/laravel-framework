@@ -5292,6 +5292,61 @@ class ValidationValidatorTest extends TestCase
         $this->assertTrue($validator->passes());
     }
 
+    public function testValidDataWithNestedValidatorPassing() {
+        $data = [
+            'relatedEntity' => [
+                'id' => 1,
+                'stringKey' => 'test'
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntity' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntity'],
+                    [
+                        'id' => 'required|int',
+                        'stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $validated = $validator->valid();
+        $this->assertArrayHasKey('relatedEntity', $validated);
+        $this->assertArrayHasKey('id', $validated['relatedEntity']);
+        $this->assertArrayHasKey('stringKey', $validated['relatedEntity']);
+    }
+
+    public function testValidDataWithNestedValidatorFailing() {
+        $data = [
+            'relatedEntity' => [
+                'id' => 1,
+            ]
+        ];
+
+        $validator = new Validator(
+            $this->getIlluminateArrayTranslator(),
+            $data,
+            [
+                'relatedEntity' => new Validator(
+                    $this->getIlluminateArrayTranslator(),
+                    $data['relatedEntity'],
+                    [
+                        'id' => 'required|int',
+                        'stringKey' => 'required|string'
+                    ]
+                )
+            ]
+        );
+
+        $validated = $validator->valid();
+        $this->assertArrayNotHasKey('relatedEntity', $validated);
+    }
+
     protected function getTranslator()
     {
         return m::mock(TranslatorContract::class);
